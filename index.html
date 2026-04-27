@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Interaction Management System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  /* ─── Reset & Base ─────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, monospace;
+    --color-bg:           #ffffff;
+    --color-bg2:          #f7f7f5;
+    --color-bg3:          #f0efe9;
+    --color-bg-info:      #E6F1FB;
+    --color-bg-success:   #EAF3DE;
+    --color-bg-warning:   #FAEEDA;
+    --color-bg-danger:    #FCEBEB;
+    --color-text:         #1a1a18;
+    --color-text2:        #73726c;
+    --color-text3:        #a09f99;
+    --color-text-info:    #0C447C;
+    --color-text-success: #27500A;
+    --color-text-warning: #633806;
+    --color-text-danger:  #791F1F;
+    --color-border:       rgba(0,0,0,0.10);
+    --color-border2:      rgba(0,0,0,0.18);
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg:           #1c1c1a;
+      --color-bg2:          #242422;
+      --color-bg3:          #2c2c2a;
+      --color-bg-info:      #042C53;
+      --color-bg-success:   #173404;
+      --color-bg-warning:   #412402;
+      --color-bg-danger:    #501313;
+      --color-text:         #e8e6de;
+      --color-text2:        #9c9a92;
+      --color-text3:        #6a6862;
+      --color-text-info:    #85B7EB;
+      --color-text-success: #97C459;
+      --color-text-warning: #EF9F27;
+      --color-text-danger:  #F09595;
+      --color-border:       rgba(255,255,255,0.10);
+      --color-border2:      rgba(255,255,255,0.18);
+    }
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-bg3);
+    color: var(--color-text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  #root { max-width: 900px; margin: 0 auto; background: var(--color-bg); min-height: 100vh; }
+
+  /* ─── Layout ────────────────────────────────────────────────────── */
+  .app { padding-bottom: 3rem; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1.25rem; border-bottom: .5px solid var(--color-border); margin-bottom: 1rem; gap: 8px; flex-wrap: wrap; }
+  .topbar-title { font-size: 15px; font-weight: 500; }
+  .topbar-sub { font-size: 12px; color: var(--color-text2); }
+  .topbar-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tabs { display: flex; gap: 4px; padding: 0 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .section { padding: 0 1.25rem; }
+
+  /* ─── Cards ─────────────────────────────────────────────────────── */
+  .card { background: var(--color-bg); border: .5px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1rem; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: .5px solid var(--color-border); flex-wrap: wrap; gap: 6px; }
+  .card-title { font-size: 13px; font-weight: 500; }
+  .card-count { font-size: 12px; color: var(--color-text2); }
+
+  /* ─── Metric Cards ───────────────────────────────────────────────── */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1rem; }
+  .metric-card { background: var(--color-bg2); border-radius: var(--radius-md); padding: 12px 14px; }
+  .metric-label { font-size: 11px; color: var(--color-text2); margin-bottom: 5px; }
+  .metric-value { font-size: 21px; font-weight: 500; line-height: 1; }
+  .metric-sub { font-size: 11px; color: var(--color-text3); margin-top: 4px; }
+  .progress-bar { height: 5px; background: var(--color-bg3); border-radius: 3px; overflow: hidden; margin-top: 7px; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+
+  /* ─── Tabs ───────────────────────────────────────────────────────── */
+  .tab { padding: 6px 13px; border-radius: var(--radius-md); border: .5px solid transparent; font-size: 13px; cursor: pointer; background: transparent; color: var(--color-text2); transition: all .15s; }
+  .tab.active { background: var(--color-bg2); border-color: var(--color-border2); color: var(--color-text); font-weight: 500; }
+  .tab:hover:not(.active) { background: var(--color-bg2); color: var(--color-text); }
+
+  /* ─── Buttons ────────────────────────────────────────────────────── */
+  .btn { padding: 5px 11px; border-radius: var(--radius-md); border: .5px solid var(--color-border2); background: transparent; font-size: 12px; cursor: pointer; color: var(--color-text); transition: all .15s; white-space: nowrap; font-family: var(--font-sans); }
+  .btn:hover { background: var(--color-bg2); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn-primary { background: var(--color-bg-info); color: var(--color-text-info); border-color: transparent; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-sm { padding: 3px 8px; font-size: 11px; }
+  .btn-danger { background: var(--color-bg-danger); color: var(--color-text-danger); border-color: transparent; }
+
+  /* ─── Segmented Control ──────────────────────────────────────────── */
+  .seg { display: flex; gap: 2px; background: var(--color-bg2); border-radius: var(--radius-md); padding: 2px; }
+  .seg-btn { padding: 4px 9px; border-radius: 6px; border: none; font-size: 11px; cursor: pointer; background: transparent; color: var(--color-text2); transition: all .15s; font-family: var(--font-sans); }
+  .seg-btn.active { background: var(--color-bg); color: var(--color-text); font-weight: 500; border: .5px solid var(--color-border); }
+
+  /* ─── Forms ──────────────────────────────────────────────────────── */
+  input, select, textarea {
+    background: var(--color-bg); border: .5px solid var(--color-border2);
+    border-radius: var(--radius-md); padding: 7px 10px; font-size: 13px;
+    color: var(--color-text); width: 100%; font-family: var(--font-sans);
+    outline: none; transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--color-text3); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .form-label { font-size: 11px; font-weight: 500; color: var(--color-text2); text-transform: uppercase; letter-spacing: .04em; }
+
+  /* ─── Table ──────────────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th { text-align: left; font-size: 11px; font-weight: 500; color: var(--color-text2); padding: 8px 10px; border-bottom: .5px solid var(--color-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; user-select: none; }
+  th:hover { color: var(--color-text); }
+  td { padding: 8px 10px; border-bottom: .5px solid var(--color-border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--color-bg2); }
+
+  /* ─── Badges ─────────────────────────────────────────────────────── */
+  .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-warn    { background: var(--color-bg-warning); color: var(--color-text-warning); }
+  .badge-danger  { background: var(--color-bg-danger);  color: var(--color-text-danger); }
+  .badge-success { background: var(--color-bg-success); color: var(--color-text-success); }
+  .badge-info    { background: var(--color-bg-info);    color: var(--color-text-info); }
+
+  /* ─── User / Avatar ──────────────────────────────────────────────── */
+  .avatar    { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px;  font-weight: 500; flex-shrink: 0; }
+  .avatar-lg { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+  .team-pill { display: inline-flex; align-items: center; gap: 4px; background: var(--color-bg2); border-radius: 20px; padding: 2px 8px; font-size: 11px; color: var(--color-text2); }
+  .user-chip { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border: .5px solid var(--color-border2); border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--color-bg2); }
+  .user-chip:hover { background: var(--color-bg3); }
+  .role-badge { display: inline-flex; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .role-admin   { background: #EEEDFE; color: #3C3489; }
+  .role-manager { background: #E1F5EE; color: #085041; }
+  .role-rep     { background: #FAEEDA; color: #633806; }
+  .role-viewer  { background: #F1EFE8; color: #444441; }
+  .nav-pill { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: var(--radius-md); background: var(--color-bg-info); color: var(--color-text-info); font-size: 11px; font-weight: 500; }
+
+  /* ─── Misc ───────────────────────────────────────────────────────── */
+  .perm-check { width: 14px; height: 14px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+  .perm-on  { background: var(--color-bg-success); color: var(--color-text-success); }
+  .perm-off { background: var(--color-bg2); color: var(--color-text3); border: .5px solid var(--color-border); }
+  .urgency-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: .5px solid var(--color-border); }
+  .urgency-row:last-child { border-bottom: none; }
+  .urgency-row:hover { background: var(--color-bg2); }
+  .log-entry { padding: 8px 12px; border-bottom: .5px solid var(--color-border); font-size: 12px; }
+  .log-entry:last-child { border-bottom: none; }
+  .empty-state { padding: 2rem; text-align: center; color: var(--color-text3); font-size: 13px; }
+  .search-bar { position: relative; margin-bottom: 1rem; }
+  .search-bar input { padding-left: 28px; }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--color-text3); font-size: 12px; pointer-events: none; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .field-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: .5px solid var(--color-border); }
+  .field-row:last-child { border-bottom: none; }
+  .csv-drop { border: 1px dashed var(--color-border2); border-radius: var(--radius-md); padding: 1.25rem; text-align: center; color: var(--color-text2); font-size: 13px; cursor: pointer; transition: background .15s; }
+  .csv-drop:hover { background: var(--color-bg2); }
+  .chart-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 14px; }
+  .chart-type-btn { padding: 8px 4px; border-radius: var(--radius-md); border: .5px solid var(--color-border); background: transparent; cursor: pointer; text-align: center; font-size: 11px; color: var(--color-text2); transition: all .15s; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: var(--font-sans); }
+  .chart-type-btn:hover { background: var(--color-bg2); }
+  .chart-type-btn.active { background: var(--color-bg-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+  .chart-icon { font-size: 18px; line-height: 1; }
+  .user-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: .5px solid var(--color-border); }
+  .user-row:last-child { border-bottom: none; }
+  .user-row:hover { background: var(--color-bg2); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: var(--color-bg); border: .5px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem; width: 500px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 15px; font-weight: 500; margin-bottom: 1rem; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1rem; padding-top: 10px; border-top: .5px solid var(--color-border); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {useState,useMemo,useEffect,useRef}=React;
+const h=React.createElement;
+
+/* ── Constants ─────────────────────────────────────────────────────── */
+const ROLES={
+  admin:  {label:'Admin',   perms:{view:true,log:true,addAccount:true,import:true,manageUsers:true,exportData:true,manageSchema:true}},
+  manager:{label:'Manager', perms:{view:true,log:true,addAccount:true,import:true,manageUsers:false,exportData:true,manageSchema:false}},
+  rep:    {label:'Rep',     perms:{view:true,log:true,addAccount:false,import:false,manageUsers:false,exportData:false,manageSchema:false}},
+  viewer: {label:'Viewer',  perms:{view:true,log:false,addAccount:false,import:false,manageUsers:false,exportData:false,manageSchema:false}},
+};
+const ROLE_PERMS_LABELS=[['view','View accounts'],['log','Log calls'],['addAccount','Add accounts'],['import','Import CSV'],['manageUsers','Manage users'],['exportData','Export data'],['manageSchema','Manage fields']];
+const TEAM_COLORS=[{color:'#185FA5',bg:'#E6F1FB'},{color:'#0F6E56',bg:'#E1F5EE'},{color:'#993C1D',bg:'#FAECE7'},{color:'#993556',bg:'#FBEAF0'},{color:'#854F0B',bg:'#FAEEDA'},{color:'#534AB7',bg:'#EEEDFE'}];
+const SECTORS=['Retail','F&B','Finance','Healthcare','Logistics','Tech','Education','Real Estate'];
+const BRANDS=[['Al Futtaim Group','ACE Hardware'],['Alshaya Group','Starbucks ME'],['Majid Al Futtaim','Mall of the Emirates'],['Jarir Bookstore','Jarir'],['Extra Stores','Extra'],['Nahdi Medical','Nahdi'],['Tamimi Markets','Tamimi'],['Abdul Latif Jameel','ALJ Auto'],['Gulf Union Foods','Sunbulah'],['Sadafco','Saudia Dairy'],['National Water Company','NWC'],['Saudi Airlines Catering','SAC'],['Binzagr Company','Binzagr'],['Leejam Sports','Fitness Time'],['BinDawood Holding','Danube'],['United Electronics','eXtra'],['Cenomi Retail','Cenomi'],['Arabian Food Industries','Domty'],['SASCO','SASCO Energy'],['Nana Direct','Nana']];
+const CHART_TYPES=[{id:'bar',label:'Bar',icon:'▬'},{id:'line',label:'Line',icon:'╱'},{id:'area',label:'Area',icon:'◭'},{id:'horizontalBar',label:'H. Bar',icon:'▭'},{id:'pie',label:'Pie',icon:'◕'},{id:'doughnut',label:'Donut',icon:'◎'},{id:'radar',label:'Radar',icon:'✦'},{id:'scatter',label:'Scatter',icon:'⁙'}];
+const INIT_CALL_STATUSES=[{id:'cs1',label:'Completed',color:'#1D9E75'},{id:'cs2',label:'No Answer',color:'#BA7517'},{id:'cs3',label:'Follow-up Required',color:'#185FA5'},{id:'cs4',label:'Meeting Scheduled',color:'#534AB7'},{id:'cs5',label:'Not Interested',color:'#A32D2D'},{id:'cs6',label:'Voicemail Left',color:'#5F5E5A'}];
+const INIT_ACCOUNT_EXTRA_FIELDS=[{id:'ef1',label:'Region',type:'text',entity:'account'},{id:'ef2',label:'Priority',type:'select',options:['High','Medium','Low'],entity:'account'}];
+const INIT_USER_EXTRA_FIELDS=[{id:'uf1',label:'Phone',type:'text',entity:'user'},{id:'uf2',label:'Territory',type:'text',entity:'user'}];
+const INIT_CALL_EXTRA_FIELDS=[{id:'cf1',label:'Deal Size',type:'text',entity:'call'},{id:'cf2',label:'Next Step',type:'text',entity:'call'}];
+const INIT_USERS=[{id:'u1',name:'Ahmed Al-Harbi',role:'admin',email:'ahmed@corp.com',...TEAM_COLORS[0]},{id:'u2',name:'Sara Al-Zahrani',role:'manager',email:'sara@corp.com',...TEAM_COLORS[1]},{id:'u3',name:'Mohammed Al-Ghamdi',role:'rep',email:'mohammed@corp.com',...TEAM_COLORS[2]},{id:'u4',name:'Fatima Al-Otaibi',role:'rep',email:'fatima@corp.com',...TEAM_COLORS[3]},{id:'u5',name:'Khalid Al-Qahtani',role:'viewer',email:'khalid@corp.com',...TEAM_COLORS[4]}];
+
+/* ── Helpers ───────────────────────────────────────────────────────── */
+function rndDate(n){const d=new Date();d.setDate(d.getDate()-Math.floor(Math.random()*n));return d.toISOString().split('T')[0];}
+function daysSince(ds){return Math.floor((new Date()-new Date(ds))/864e5);}
+function initials(name){return name.split(' ').slice(0,2).map(w=>w[0]).join('');}
+function genMockNotes(users,statuses){const notes=[];const now=new Date();for(let i=89;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);const ds=d.toISOString().split('T')[0];const cnt=Math.floor(Math.random()*4);for(let j=0;j<cnt;j++){notes.push({date:ds,text:'Follow-up call.',memberId:users[Math.floor(Math.random()*users.length)].id,statusId:statuses[Math.floor(Math.random()*statuses.length)].id,extraFields:{cf1:'',cf2:''}});}}return notes;}
+function genMock(users,statuses){const pool=genMockNotes(users,statuses);return BRANDS.map(([name,brand],i)=>{const myNotes=pool.filter((_,idx)=>idx%BRANDS.length===i).slice(0,3);return{id:`ACC-${String(i+1).padStart(4,'0')}`,accountName:name,brandName:brand,branches:Math.floor(Math.random()*120)+3,sector:SECTORS[i%SECTORS.length],lastCallDate:myNotes.length?myNotes[0].date:rndDate(45),contactPerson:`${['Ahmed','Sara','Mohammed','Fatima','Khalid'][i%5]} ${['Al-Harbi','Al-Zahrani','Al-Ghamdi','Al-Otaibi','Al-Qahtani'][i%5]}`,notes:myNotes,extraFields:{ef1:'',ef2:'Medium'}};});}
+
+/* ── Shared Components ─────────────────────────────────────────────── */
+function urgencyBadge(days){if(days>30)return h('span',{className:'badge badge-danger'},days+'d');if(days>14)return h('span',{className:'badge badge-warn'},days+'d');return h('span',{className:'badge badge-success'},days+'d');}
+function UserPill({userId,users}){const u=users.find(x=>x.id===userId);if(!u)return null;return h('span',{className:'team-pill'},h('span',{className:'avatar',style:{background:u.bg,color:u.color}},initials(u.name)),u.name.split(' ')[0]);}
+function RoleBadge({role}){return h('span',{className:'role-badge role-'+role},ROLES[role]?.label||role);}
+function StatusBadge({statusId,statuses}){const s=statuses.find(x=>x.id===statusId);if(!s)return null;return h('span',{style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,fontWeight:500}},h('span',{className:'status-dot',style:{background:s.color}}),s.label);}
+
+/* ── Chart Component ───────────────────────────────────────────────── */
+function CallsChart({allLogs,users,isRep,activeUserId}){
+  const canvasRef=useRef(null);const chartRef=useRef(null);
+  const [granularity,setGranularity]=useState('weekly');
+  const [rangeOffset,setRangeOffset]=useState(0);
+  const [chartType,setChartType]=useState('bar');
+  const [showTypePanel,setShowTypePanel]=useState(false);
+  const visibleUsers=isRep?users.filter(u=>u.id===activeUserId):users;
+  const RANGE_SIZE={daily:14,weekly:8,monthly:12,yearly:3};
+
+  const {labels,datasets,rangeLabel}=useMemo(()=>{
+    const now=new Date();const size=RANGE_SIZE[granularity];
+    const logsToUse=isRep?allLogs.filter(l=>l.memberId===activeUserId):allLogs;
+    function makeDaily(){const days=[];for(let i=(size-1+rangeOffset*size);i>=(rangeOffset*size);i--){const d=new Date(now);d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}const labels=days.map(d=>{const dt=new Date(d);return `${dt.getDate()}/${dt.getMonth()+1}`;});const datasets=visibleUsers.map(u=>({label:u.name.split(' ')[0],data:days.map(day=>logsToUse.filter(l=>l.date===day&&l.memberId===u.id).length),backgroundColor:u.bg,borderColor:u.color,borderWidth:1.5,borderRadius:3,fill:chartType==='area',tension:.35,pointRadius:2}));const fmt=d=>{const dt=new Date(d);return `${dt.getDate()} ${dt.toLocaleString('en',{month:'short'})}`;};return{labels,datasets,rangeLabel:`${fmt(days[0])} – ${fmt(days[days.length-1])}`};}
+    function makeWeekly(){const weeks=[];for(let i=(size-1+rangeOffset*size);i>=(rangeOffset*size);i--){const d=new Date(now);d.setDate(d.getDate()-i*7);const day=d.getDay(),diff=d.getDate()-day+(day===0?-6:1);const mon=new Date(d);mon.setDate(diff);weeks.push(mon.toISOString().split('T')[0]);}function weekOf(ds){const d=new Date(ds);const day=d.getDay(),diff=d.getDate()-day+(day===0?-6:1);const m=new Date(d);m.setDate(diff);return m.toISOString().split('T')[0];}const labels=weeks.map(w=>{const d=new Date(w);return `${d.toLocaleString('en',{month:'short'})} ${d.getDate()}`;});const datasets=visibleUsers.map(u=>({label:u.name.split(' ')[0],data:weeks.map(wk=>logsToUse.filter(l=>weekOf(l.date)===wk&&l.memberId===u.id).length),backgroundColor:u.bg,borderColor:u.color,borderWidth:1.5,borderRadius:3,fill:chartType==='area',tension:.35,pointRadius:2}));const fmt=w=>{const d=new Date(w);return `${d.toLocaleString('en',{month:'short'})} ${d.getDate()}`;};return{labels,datasets,rangeLabel:`${fmt(weeks[0])} – ${fmt(weeks[weeks.length-1])}`};}
+    function makeMonthly(){const months=[];for(let i=(size-1+rangeOffset*size);i>=(rangeOffset*size);i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}function monthOf(ds){return ds.slice(0,7);}const labels=months.map(m=>{const[y,mo]=m.split('-');return `${new Date(y,mo-1).toLocaleString('en',{month:'short'})} ${y}`;});const datasets=visibleUsers.map(u=>({label:u.name.split(' ')[0],data:months.map(mo=>logsToUse.filter(l=>monthOf(l.date)===mo&&l.memberId===u.id).length),backgroundColor:u.bg,borderColor:u.color,borderWidth:1.5,borderRadius:3,fill:chartType==='area',tension:.35,pointRadius:2}));return{labels,datasets,rangeLabel:`${labels[0]} – ${labels[labels.length-1]}`};}
+    function makeYearly(){const years=[];for(let i=(size-1+rangeOffset*size);i>=(rangeOffset*size);i--){years.push(now.getFullYear()-i);}const labels=years.map(String);const datasets=visibleUsers.map(u=>({label:u.name.split(' ')[0],data:years.map(yr=>logsToUse.filter(l=>l.date.startsWith(yr+'')&&l.memberId===u.id).length),backgroundColor:u.bg,borderColor:u.color,borderWidth:1.5,borderRadius:3,fill:chartType==='area',tension:.35,pointRadius:2}));return{labels,datasets,rangeLabel:`${years[0]} – ${years[years.length-1]}`};}
+    return{daily:makeDaily,weekly:makeWeekly,monthly:makeMonthly,yearly:makeYearly}[granularity]();
+  },[allLogs,visibleUsers,granularity,rangeOffset,chartType,isRep,activeUserId]);
+
+  useEffect(()=>{
+    if(!canvasRef.current)return;if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    const isPie=chartType==='pie'||chartType==='doughnut'||chartType==='radar';const isArea=chartType==='area';const isHBar=chartType==='horizontalBar';const isScatter=chartType==='scatter';
+    let type=chartType;if(isHBar)type='bar';if(isArea)type='line';if(isScatter)type='scatter';
+    let data={labels,datasets};
+    if(isPie){const totals=visibleUsers.map(u=>datasets.find(d=>d.label===u.name.split(' ')[0])?.data.reduce((s,v)=>s+v,0)||0);data={labels:visibleUsers.map(u=>u.name.split(' ')[0]),datasets:[{data:totals,backgroundColor:visibleUsers.map(u=>u.color),borderColor:'transparent',borderWidth:0}]};}
+    if(isScatter){data={datasets:visibleUsers.map((u,ui)=>({label:u.name.split(' ')[0],data:datasets[ui]?.data.map((v,xi)=>({x:xi,y:v}))||[],backgroundColor:u.color+'cc',pointRadius:5,pointHoverRadius:7}))});}
+    chartRef.current=new Chart(canvasRef.current,{type:type,data,options:{responsive:true,maintainAspectRatio:false,indexAxis:isHBar?'y':'x',plugins:{legend:{display:isPie,position:'bottom',labels:{font:{size:11},boxWidth:10,padding:12}},tooltip:{mode:isPie||isScatter?'nearest':'index',intersect:isPie||isScatter,callbacks:{footer:isPie||isScatter?undefined:(items)=>{const t=items.reduce((s,i)=>s+i.raw,0);return t?`Total: ${t} calls`:'';}}}},scales:isPie?{}:{x:{stacked:!isArea&&!isScatter&&type==='bar',grid:{display:false},ticks:{font:{size:10},maxRotation:45,autoSkip:true}},y:{stacked:!isArea&&!isScatter&&type==='bar',beginAtZero:true,ticks:{stepSize:1,font:{size:10},precision:0},grid:{color:'rgba(128,128,128,0.07)'}}}}});
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[labels,datasets,chartType,visibleUsers]);
+
+  return h('div',null,
+    showTypePanel&&h('div',null,
+      h('div',{className:'chart-type-grid'},CHART_TYPES.map(ct=>h('button',{key:ct.id,className:'chart-type-btn '+(chartType===ct.id?'active':''),onClick:()=>{setChartType(ct.id);setShowTypePanel(false);}},h('span',{className:'chart-icon'},ct.icon),ct.label))),
+      h('div',{style:{height:1,background:'var(--color-border)',margin:'0 14px 10px'}})
+    ),
+    h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 14px',flexWrap:'wrap',gap:8}},
+      h('div',{style:{display:'flex',flexWrap:'wrap',gap:8,fontSize:11,color:'var(--color-text2)'}},visibleUsers.map(u=>h('span',{key:u.id,style:{display:'flex',alignItems:'center',gap:4}},h('span',{style:{width:10,height:10,borderRadius:2,background:u.color,display:'inline-block'}}),u.name.split(' ')[0]))),
+      h('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+        h('button',{className:'btn btn-sm',onClick:()=>setShowTypePanel(s=>!s)},CHART_TYPES.find(c=>c.id===chartType)?.icon+' '+CHART_TYPES.find(c=>c.id===chartType)?.label+' ▾'),
+        h('div',{className:'seg'},['daily','weekly','monthly','yearly'].map(g=>h('button',{key:g,className:'seg-btn '+(granularity===g?'active':''),onClick:()=>{setGranularity(g);setRangeOffset(0);}},g.charAt(0).toUpperCase()+g.slice(1))))
+      )
+    ),
+    h('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'0 14px 8px',fontSize:11,color:'var(--color-text2)'}},
+      h('button',{className:'btn btn-sm',onClick:()=>setRangeOffset(o=>o+1)},'← Older'),
+      h('span',{style:{flex:1,textAlign:'center',fontWeight:500,color:'var(--color-text)',fontSize:12}},rangeLabel),
+      h('button',{className:'btn btn-sm',disabled:rangeOffset===0,onClick:()=>setRangeOffset(o=>Math.max(0,o-1))},'Newer →')
+    ),
+    h('div',{style:{position:'relative',height:200,padding:'0 14px 12px'}},h('canvas',{ref:canvasRef,role:'img','aria-label':'Activity chart'},'Activity chart.'))
+  );
+}
+
+/* ── Schema Manager ────────────────────────────────────────────────── */
+function SchemaManager({accountExtraFields,userExtraFields,callExtraFields,callStatuses,setAccountExtraFields,setUserExtraFields,setCallExtraFields,setCallStatuses}){
+  const [newField,setNewField]=useState({label:'',type:'text',options:'',entity:'account'});
+  const [newStatus,setNewStatus]=useState({label:'',color:'#378ADD'});
+  function addField(){if(!newField.label)return;const f={id:'f'+Date.now(),label:newField.label,type:newField.type,entity:newField.entity,options:newField.type==='select'?newField.options.split(',').map(s=>s.trim()).filter(Boolean):[]};if(newField.entity==='account')setAccountExtraFields(p=>[...p,f]);else if(newField.entity==='user')setUserExtraFields(p=>[...p,f]);else setCallExtraFields(p=>[...p,f]);setNewField({label:'',type:'text',options:'',entity:'account'});}
+  function delField(entity,id){if(entity==='account')setAccountExtraFields(p=>p.filter(f=>f.id!==id));else if(entity==='user')setUserExtraFields(p=>p.filter(f=>f.id!==id));else setCallExtraFields(p=>p.filter(f=>f.id!==id));}
+  function addStatus(){if(!newStatus.label)return;setCallStatuses(p=>[...p,{id:'cs'+Date.now(),...newStatus}]);setNewStatus({label:'',color:'#378ADD'});}
+  const allFields=[...accountExtraFields,...userExtraFields,...callExtraFields];
+  const entityLabel={account:'Account',user:'User',call:'Call'};
+  return h('div',{className:'section'},
+    h('div',{className:'card'},
+      h('div',{className:'card-header'},h('div',{className:'card-title'},'Custom fields'),h('div',{className:'card-count'},allFields.length+' fields')),
+      h('div',{style:{padding:'10px 14px'}},
+        allFields.length===0?h('div',{style:{color:'var(--color-text3)',fontSize:12,padding:'4px 0'}},'No custom fields yet.')
+          :allFields.map(f=>h('div',{key:f.id,className:'field-row'},h('span',{style:{fontSize:12,flex:1,fontWeight:500}},f.label),h('span',{style:{fontSize:11,color:'var(--color-text2)',minWidth:50}},f.type),h('span',{className:'badge badge-info',style:{minWidth:50}},entityLabel[f.entity]),f.options?.length?h('span',{style:{fontSize:11,color:'var(--color-text3)',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.options.join(', ')):null,h('button',{className:'btn btn-sm btn-danger',onClick:()=>delField(f.entity,f.id)},'Remove'))),
+        h('div',{style:{marginTop:12,borderTop:'.5px solid var(--color-border)',paddingTop:12}}),
+        h('div',{style:{fontSize:11,fontWeight:500,color:'var(--color-text2)',marginBottom:8,textTransform:'uppercase',letterSpacing:'.04em'}},'Add new field'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:8,marginBottom:8}},
+          h('input',{type:'text',placeholder:'Field label',value:newField.label,onChange:ev=>setNewField(f=>({...f,label:ev.target.value}))}),
+          h('select',{value:newField.type,onChange:ev=>setNewField(f=>({...f,type:ev.target.value}))},['text','number','date','select'].map(t=>h('option',{key:t,value:t},t.charAt(0).toUpperCase()+t.slice(1)))),
+          h('select',{value:newField.entity,onChange:ev=>setNewField(f=>({...f,entity:ev.target.value}))},Object.entries(entityLabel).map(([k,v])=>h('option',{key:k,value:k},v)))
+        ),
+        newField.type==='select'&&h('div',{style:{marginBottom:8}},h('input',{type:'text',placeholder:'Options: High,Medium,Low',value:newField.options,onChange:ev=>setNewField(f=>({...f,options:ev.target.value}))})),
+        h('button',{className:'btn btn-primary btn-sm',onClick:addField},'Add field')
+      )
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-header'},h('div',{className:'card-title'},'Call status options'),h('div',{className:'card-count'},callStatuses.length+' statuses')),
+      h('div',{style:{padding:'10px 14px'}},
+        callStatuses.map(s=>h('div',{key:s.id,className:'field-row'},h('span',{className:'status-dot',style:{background:s.color,marginRight:4}}),h('span',{style:{fontSize:12,flex:1,fontWeight:500}},s.label),h('button',{className:'btn btn-sm btn-danger',onClick:()=>setCallStatuses(p=>p.filter(x=>x.id!==s.id))},'Remove'))),
+        h('div',{style:{marginTop:12,borderTop:'.5px solid var(--color-border)',paddingTop:12}}),
+        h('div',{style:{fontSize:11,fontWeight:500,color:'var(--color-text2)',marginBottom:8,textTransform:'uppercase',letterSpacing:'.04em'}},'Add status'),
+        h('div',{style:{display:'flex',gap:8}},
+          h('input',{type:'text',placeholder:'Status label',value:newStatus.label,onChange:ev=>setNewStatus(s=>({...s,label:ev.target.value}))}),
+          h('input',{type:'color',value:newStatus.color,style:{width:44,padding:'4px 6px',cursor:'pointer'},onChange:ev=>setNewStatus(s=>({...s,color:ev.target.value}))}),
+          h('button',{className:'btn btn-primary btn-sm',style:{flexShrink:0},onClick:addStatus},'Add')
+        )
+      )
+    )
+  );
+}
+
+/* ── User Form ─────────────────────────────────────────────────────── */
+function UserForm({user,users,isMe,userExtraFields,onSave,onClose}){
+  const [form,setForm]=useState(user?{name:user.name,email:user.email||'',role:user.role,extraFields:user.extraFields||{}}:{name:'',email:'',role:'rep',extraFields:{}});
+  function save(){if(!form.name)return;onSave({...user,...form,...(user?{}:TEAM_COLORS[users.length%TEAM_COLORS.length]),id:user?.id||'u'+Date.now()});}
+  return h('div',null,
+    h('div',{className:'form-field'},h('label',{className:'form-label'},'Full name'),h('input',{type:'text',value:form.name,placeholder:'Full name',onChange:ev=>setForm(f=>({...f,name:ev.target.value}))})),
+    h('div',{className:'form-field'},h('label',{className:'form-label'},'Email'),h('input',{type:'email',value:form.email,placeholder:'email@company.com',onChange:ev=>setForm(f=>({...f,email:ev.target.value}))})),
+    h('div',{className:'form-field'},h('label',{className:'form-label'},'Role'),h('select',{value:form.role,disabled:isMe,onChange:ev=>setForm(f=>({...f,role:ev.target.value}))},Object.entries(ROLES).map(([k,v])=>h('option',{key:k,value:k},v.label))),isMe&&h('div',{style:{fontSize:11,color:'var(--color-text3)',marginTop:4}},'You cannot change your own role.')),
+    userExtraFields.length>0&&h('div',null,
+      h('div',{style:{fontSize:11,fontWeight:500,color:'var(--color-text2)',marginBottom:8,textTransform:'uppercase',letterSpacing:'.04em'}},'Additional fields'),
+      userExtraFields.map(f=>h('div',{key:f.id,className:'form-field'},h('label',{className:'form-label'},f.label),f.type==='select'?h('select',{value:form.extraFields[f.id]||'',onChange:ev=>setForm(ff=>({...ff,extraFields:{...ff.extraFields,[f.id]:ev.target.value}}))},h('option',{value:''},'— select —'),...(f.options||[]).map(o=>h('option',{key:o,value:o},o))):h('input',{type:f.type==='number'?'number':'text',value:form.extraFields[f.id]||'',onChange:ev=>setForm(ff=>({...ff,extraFields:{...ff.extraFields,[f.id]:ev.target.value}}))})))
+    ),
+    h('div',{className:'modal-footer'},h('button',{className:'btn',onClick:onClose},'Cancel'),h('button',{className:'btn btn-primary',onClick:save},user?'Save changes':'Add user'))
+  );
+}
+
+/* ── Main App ──────────────────────────────────────────────────────── */
+function App(){
+  const [users,setUsers]=useState(INIT_USERS);
+  const [activeUserId,setActiveUserId]=useState('u1');
+  const [callStatuses,setCallStatuses]=useState(INIT_CALL_STATUSES);
+  const [accountExtraFields,setAccountExtraFields]=useState(INIT_ACCOUNT_EXTRA_FIELDS);
+  const [userExtraFields,setUserExtraFields]=useState(INIT_USER_EXTRA_FIELDS);
+  const [callExtraFields,setCallExtraFields]=useState(INIT_CALL_EXTRA_FIELDS);
+  const [accounts,setAccounts]=useState(()=>genMock(INIT_USERS,INIT_CALL_STATUSES));
+  const [tab,setTab]=useState('dashboard');
+  const [search,setSearch]=useState('');
+  const [sortKey,setSortKey]=useState('lastCallDate');
+  const [sortDir,setSortDir]=useState('asc');
+  const [logModal,setLogModal]=useState(null);
+  const [addModal,setAddModal]=useState(false);
+  const [importModal,setImportModal]=useState(false);
+  const [detailModal,setDetailModal]=useState(null);
+  const [userModal,setUserModal]=useState(null);
+  const [switchModal,setSwitchModal]=useState(false);
+  const [logForm,setLogForm]=useState({date:'',note:'',memberId:'',statusId:'',extraFields:{}});
+  const [newForm,setNewForm]=useState({accountName:'',brandName:'',branches:'',sector:'Retail',contactPerson:'',extraFields:{}});
+
+  const today=new Date().toISOString().split('T')[0];
+  const activeUser=users.find(u=>u.id===activeUserId)||users[0];
+  const perms=ROLES[activeUser.role]?.perms||{};
+  const isRep=activeUser.role==='rep';
+
+  const allLogs=useMemo(()=>accounts.flatMap(a=>a.notes.map(n=>({...n,account:a}))).sort((a,b)=>new Date(b.date)-new Date(a.date)),[accounts]);
+  const myLogs=useMemo(()=>isRep?allLogs.filter(l=>l.memberId===activeUserId):allLogs,[allLogs,isRep,activeUserId]);
+
+  const metrics=useMemo(()=>{
+    const relevant=isRep?accounts.filter(a=>a.notes.some(n=>n.memberId===activeUserId)):accounts;
+    const c30=relevant.filter(a=>{const myN=a.notes.filter(n=>!isRep||n.memberId===activeUserId);return myN.length&&daysSince(myN[0].date)<=30;}).length;
+    const tb=relevant.reduce((s,a)=>s+a.branches,0)||1;
+    const cb=relevant.filter(a=>{const myN=a.notes.filter(n=>!isRep||n.memberId===activeUserId);return myN.length&&daysSince(myN[0].date)<=30;}).reduce((s,a)=>s+a.branches,0);
+    const total=isRep?relevant.length:accounts.length;
+    return{total,contacted30:c30,coverageRate:Math.round(c30/(total||1)*100),urgency14:accounts.filter(a=>daysSince(a.lastCallDate)>14).length,totalBranches:tb,contactedBranches:cb,branchRate:Math.round(cb/tb*100)||0,myCallsThisWeek:myLogs.filter(l=>daysSince(l.date)<=7).length};
+  },[accounts,isRep,activeUserId,myLogs]);
+
+  const filtered=useMemo(()=>{
+    let arr=accounts.filter(a=>{if(isRep&&!a.notes.some(n=>n.memberId===activeUserId))return false;const q=search.toLowerCase();return a.accountName.toLowerCase().includes(q)||a.brandName.toLowerCase().includes(q)||a.id.toLowerCase().includes(q);});
+    arr.sort((a,b)=>{let av=a[sortKey],bv=b[sortKey];if(sortKey==='branches'){av=Number(av);bv=Number(bv);}if(av<bv)return sortDir==='asc'?-1:1;if(av>bv)return sortDir==='asc'?1:-1;return 0;});
+    return arr;
+  },[accounts,search,sortKey,sortDir,isRep,activeUserId]);
+
+  const urgencyList=useMemo(()=>accounts.filter(a=>daysSince(a.lastCallDate)>14).sort((a,b)=>daysSince(b.lastCallDate)-daysSince(a.lastCallDate)),[accounts]);
+
+  function handleSort(k){if(sortKey===k)setSortDir(d=>d==='asc'?'desc':'asc');else{setSortKey(k);setSortDir('asc');}}
+  function openLog(acc){setLogModal(acc);const ef={};callExtraFields.forEach(f=>{ef[f.id]='';});setLogForm({date:today,note:'',memberId:activeUserId,statusId:callStatuses[0]?.id||'',extraFields:ef});}
+  function submitLog(){if(!logForm.date)return;setAccounts(prev=>prev.map(a=>a.id===logModal.id?{...a,lastCallDate:logForm.date,notes:[{date:logForm.date,text:logForm.note,memberId:logForm.memberId,statusId:logForm.statusId,extraFields:logForm.extraFields},...a.notes]}:a));setLogModal(null);}
+  function submitAdd(){if(!newForm.accountName||!newForm.brandName||!newForm.branches)return;setAccounts(prev=>[...prev,{id:`ACC-${String(prev.length+1).padStart(4,'0')}`,accountName:newForm.accountName,brandName:newForm.brandName,branches:Number(newForm.branches),sector:newForm.sector,contactPerson:newForm.contactPerson,lastCallDate:rndDate(50),notes:[],extraFields:newForm.extraFields}]);setAddModal(false);setNewForm({accountName:'',brandName:'',branches:'',sector:'Retail',contactPerson:'',extraFields:{}});}
+  function saveUser(u){setUsers(prev=>prev.find(x=>x.id===u.id)?prev.map(x=>x.id===u.id?u:x):[...prev,u]);}
+  function deleteUser(uid){if(uid===activeUserId)return;setUsers(prev=>prev.filter(u=>u.id!==uid));}
+  const sortArrow=k=>sortKey===k?(sortDir==='asc'?' ↑':' ↓'):'';
+
+  const ExtraFieldInput=({fields,values,onChange})=>fields.map(f=>h('div',{key:f.id,className:'form-field'},h('label',{className:'form-label'},f.label),f.type==='select'?h('select',{value:values[f.id]||'',onChange:ev=>onChange(f.id,ev.target.value)},h('option',{value:''},'— select —'),...(f.options||[]).map(o=>h('option',{key:o,value:o},o))):h('input',{type:f.type==='number'?'number':f.type==='date'?'date':'text',value:values[f.id]||'',onChange:ev=>onChange(f.id,ev.target.value)})));
+
+  return h('div',{className:'app'},
+    /* Topbar */
+    h('div',{className:'topbar'},
+      h('div',null,h('div',{className:'topbar-title'},'Client Interaction Management'),h('div',{className:'topbar-sub'},accounts.length+' accounts · '+metrics.totalBranches.toLocaleString()+' branches')),
+      h('div',{className:'topbar-actions'},
+        perms.import&&h('button',{className:'btn',onClick:()=>setImportModal(true)},'Import CSV'),
+        perms.addAccount&&h('button',{className:'btn btn-primary',onClick:()=>setAddModal(true)},'+ Account'),
+        h('div',{className:'user-chip',onClick:()=>setSwitchModal(true)},h('span',{className:'avatar',style:{background:activeUser.bg,color:activeUser.color}},initials(activeUser.name)),h('span',null,activeUser.name.split(' ')[0]),h(RoleBadge,{role:activeUser.role}))
+      )
+    ),
+    /* Tabs */
+    h('div',{className:'tabs'},
+      ['dashboard','accounts','urgency','log','users',...(perms.manageSchema?['schema']:[])].map(t=>
+        h('button',{key:t,className:'tab '+(tab===t?'active':''),onClick:()=>setTab(t)},{dashboard:'Dashboard',accounts:'Accounts',urgency:`Urgency (${metrics.urgency14})`,log:'Activity Log',users:'Users',schema:'Field Builder'}[t])
+      )
+    ),
+
+    /* Dashboard */
+    tab==='dashboard'&&h('div',{className:'section'},
+      isRep&&h('div',{style:{background:'var(--color-bg-info)',borderRadius:'var(--radius-md)',padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--color-text-info)',display:'flex',gap:6,alignItems:'center'}},h('span',{style:{fontWeight:500}},'My performance view'),' — showing only your activity'),
+      h('div',{className:'metrics-grid'},
+        h('div',{className:'metric-card'},h('div',{className:'metric-label'},isRep?'My accounts covered':'Coverage (30d)'),h('div',{className:'metric-value',style:{color:'var(--color-text-success)'}},metrics.coverageRate+'%'),h('div',{className:'progress-bar'},h('div',{className:'progress-fill',style:{width:metrics.coverageRate+'%',background:'var(--color-text-success)'}})),h('div',{className:'metric-sub'},metrics.contacted30+' of '+metrics.total)),
+        isRep?h('div',{className:'metric-card'},h('div',{className:'metric-label'},'My calls this week'),h('div',{className:'metric-value',style:{color:'var(--color-text-info)'}},metrics.myCallsThisWeek),h('div',{className:'metric-sub'},'out of '+myLogs.length+' total')):h('div',{className:'metric-card'},h('div',{className:'metric-label'},'Overdue >14d'),h('div',{className:'metric-value',style:{color:'var(--color-text-warning)'}},metrics.urgency14),h('div',{className:'metric-sub'},'Need contact')),
+        h('div',{className:'metric-card'},h('div',{className:'metric-label'},isRep?'My branches':'Total branches'),h('div',{className:'metric-value'},metrics.totalBranches.toLocaleString()),h('div',{className:'metric-sub'},'Under management')),
+        h('div',{className:'metric-card'},h('div',{className:'metric-label'},'Branch coverage'),h('div',{className:'metric-value',style:{color:'var(--color-text-info)'}},metrics.branchRate+'%'),h('div',{className:'progress-bar'},h('div',{className:'progress-fill',style:{width:metrics.branchRate+'%',background:'var(--color-text-info)'}})),h('div',{className:'metric-sub'},metrics.contactedBranches.toLocaleString()+' branches'))
+      ),
+      h('div',{className:'card'},h('div',{className:'card-header'},h('div',{className:'card-title'},isRep?'My call activity':'Team call activity'),h('div',{className:'card-count'},myLogs.length+' total logs')),h(CallsChart,{allLogs,users,isRep,activeUserId})),
+      !isRep&&h('div',{className:'card'},h('div',{className:'card-header'},h('div',{className:'card-title'},'Top priority — overdue accounts'),h('div',{className:'card-count'},urgencyList.slice(0,5).length+' shown')),urgencyList.slice(0,5).length===0?h('div',{className:'empty-state'},'All accounts contacted in the last 14 days.'):urgencyList.slice(0,5).map(acc=>h('div',{key:acc.id,className:'urgency-row'},h('div',null,h('div',{style:{fontWeight:500,fontSize:13}},acc.brandName),h('div',{style:{fontSize:12,color:'var(--color-text2)',marginTop:2}},acc.accountName+' · '+acc.branches+' branches')),h('div',{style:{display:'flex',alignItems:'center',gap:8}},urgencyBadge(daysSince(acc.lastCallDate)),perms.log&&h('button',{className:'btn btn-sm',onClick:()=>openLog(acc)},'Log call')))))
+    ),
+
+    /* Accounts */
+    tab==='accounts'&&h('div',{className:'section'},
+      h('div',{className:'search-bar'},h('span',{className:'search-icon'},'⌕'),h('input',{type:'text',placeholder:'Search…',value:search,onChange:ev=>setSearch(ev.target.value)})),
+      h('div',{className:'card'},
+        h('div',{className:'card-header'},h('div',{className:'card-title'},isRep?'My accounts':'All accounts'),h('div',{className:'card-count'},filtered.length+' results')),
+        h('div',{style:{overflowX:'auto'}},
+          h('table',null,
+            h('thead',null,h('tr',null,...[['id','ID',55],['accountName','Account',125],['brandName','Brand',95],['branches','Branches',65],['lastCallDate','Last call',88]].map(([k,l,w])=>h('th',{key:k,style:{width:w},onClick:()=>handleSort(k)},l+sortArrow(k))),h('th',{style:{width:90}},'Last by'),h('th',{style:{width:55}},'Action'))),
+            h('tbody',null,filtered.map(acc=>{const lastNote=acc.notes[0];return h('tr',{key:acc.id,style:{cursor:'pointer'},onClick:()=>setDetailModal(acc)},h('td',{style:{color:'var(--color-text3)',fontFamily:'var(--font-mono)',fontSize:10}},acc.id),h('td',{style:{fontWeight:500}},acc.accountName),h('td',null,acc.brandName),h('td',null,acc.branches.toLocaleString()),h('td',null,h('div',null,urgencyBadge(daysSince(acc.lastCallDate))),h('div',{style:{fontSize:10,color:'var(--color-text3)',marginTop:1}},acc.lastCallDate)),h('td',null,lastNote?.memberId?h(UserPill,{userId:lastNote.memberId,users}):h('span',{style:{color:'var(--color-text3)',fontSize:11}},'—')),h('td',{onClick:ev=>{ev.stopPropagation();perms.log&&openLog(acc);}},perms.log?h('button',{className:'btn btn-sm'},'Log'):h('span',{style:{color:'var(--color-text3)',fontSize:11}},'—')));}))
+          )
+        )
+      )
+    ),
+
+    /* Urgency */
+    tab==='urgency'&&h('div',{className:'section'},
+      h('div',{className:'card'},
+        h('div',{className:'card-header'},h('div',{className:'card-title'},'Not contacted in 14+ days'),h('div',{className:'card-count'},urgencyList.length+' accounts')),
+        urgencyList.length===0?h('div',{className:'empty-state'},'All accounts contacted recently.'):urgencyList.map(acc=>h('div',{key:acc.id,className:'urgency-row'},h('div',null,h('div',{style:{display:'flex',alignItems:'center',gap:6}},h('span',{style:{fontWeight:500,fontSize:13}},acc.brandName),h('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--color-text3)'}},acc.id)),h('div',{style:{fontSize:12,color:'var(--color-text2)',marginTop:2}},acc.accountName+' · '+acc.branches+' branches'),acc.contactPerson&&h('div',{style:{fontSize:11,color:'var(--color-text3)',marginTop:1}},'Contact: '+acc.contactPerson)),h('div',{style:{display:'flex',alignItems:'center',gap:8,flexShrink:0}},urgencyBadge(daysSince(acc.lastCallDate)),perms.log&&h('button',{className:'btn btn-sm btn-primary',onClick:()=>openLog(acc)},'Log call'))))
+      )
+    ),
+
+    /* Log */
+    tab==='log'&&h('div',{className:'section'},
+      h('div',{className:'card'},
+        h('div',{className:'card-header'},h('div',{className:'card-title'},isRep?'My interaction log':'Interaction log'),h('div',{className:'card-count'},myLogs.length+' entries')),
+        myLogs.length===0?h('div',{className:'empty-state'},'No interactions logged yet.'):myLogs.map((n,i)=>h('div',{key:i,className:'log-entry'},h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}},h('span',{style:{fontWeight:500}},n.account.brandName),h('span',{style:{color:'var(--color-text3)',fontSize:11}},n.date)),h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:3}},n.memberId&&h(UserPill,{userId:n.memberId,users}),n.statusId&&h(StatusBadge,{statusId:n.statusId,statuses:callStatuses})),n.text&&h('div',{style:{color:'var(--color-text2)'}},'Note: '+n.text),h('div',{style:{color:'var(--color-text3)',marginTop:2,fontSize:11}},n.account.accountName+' · '+n.account.id)))
+      )
+    ),
+
+    /* Users */
+    tab==='users'&&h('div',{className:'section'},
+      !perms.manageUsers?h('div',{className:'card'},h('div',{className:'card-header'},h('div',{className:'card-title'},'Team members')),users.map(u=>h('div',{key:u.id,className:'user-row'},h('div',{style:{display:'flex',alignItems:'center',gap:10}},h('span',{className:'avatar-lg',style:{background:u.bg,color:u.color}},initials(u.name)),h('div',null,h('div',{style:{fontWeight:500,fontSize:13}},u.name),h('div',{style:{fontSize:11,color:'var(--color-text3)'}},u.email))),h(RoleBadge,{role:u.role})))):
+      h('div',null,
+        h('div',{className:'card'},
+          h('div',{className:'card-header'},h('div',{className:'card-title'},'User management'),h('button',{className:'btn btn-primary btn-sm',onClick:()=>setUserModal({isNew:true})},'+ Add user')),
+          users.map(u=>h('div',{key:u.id,className:'user-row'},h('div',{style:{display:'flex',alignItems:'center',gap:10}},h('span',{className:'avatar-lg',style:{background:u.bg,color:u.color}},initials(u.name)),h('div',null,h('div',{style:{display:'flex',alignItems:'center',gap:6}},h('span',{style:{fontWeight:500,fontSize:13}},u.name),u.id===activeUserId&&h('span',{className:'nav-pill'},'You')),h('div',{style:{fontSize:11,color:'var(--color-text3)'}},u.email))),h('div',{style:{display:'flex',alignItems:'center',gap:8}},h(RoleBadge,{role:u.role}),h('button',{className:'btn btn-sm',onClick:()=>setUserModal({user:u})},'Edit'),u.id!==activeUserId&&h('button',{className:'btn btn-sm btn-danger',onClick:()=>deleteUser(u.id)},'Remove'))))
+        ),
+        h('div',{className:'card'},
+          h('div',{className:'card-header'},h('div',{className:'card-title'},'Role permissions matrix')),
+          h('div',{style:{padding:'10px 14px',overflowX:'auto'}},
+            h('table',null,
+              h('thead',null,h('tr',null,h('th',{style:{width:130}},'Permission'),...Object.entries(ROLES).map(([k,v])=>h('th',{key:k},v.label)))),
+              h('tbody',null,ROLE_PERMS_LABELS.map(([pk,pl])=>h('tr',{key:pk},h('td',{style:{color:'var(--color-text2)',fontSize:12}},pl),...Object.entries(ROLES).map(([rk,rv])=>h('td',{key:rk,style:{textAlign:'center'}},h('span',{className:'perm-check '+(rv.perms[pk]?'perm-on':'perm-off')},rv.perms[pk]?'✓':'×'))))))
+            )
+          )
+        )
+      )
+    ),
+
+    /* Schema/Field Builder */
+    tab==='schema'&&perms.manageSchema&&h(SchemaManager,{accountExtraFields,userExtraFields,callExtraFields,callStatuses,setAccountExtraFields,setUserExtraFields,setCallExtraFields,setCallStatuses}),
+
+    /* Log Call Modal */
+    logModal&&h('div',{className:'modal-overlay',onClick:()=>setLogModal(null)},
+      h('div',{className:'modal',onClick:ev=>ev.stopPropagation()},
+        h('div',{className:'modal-title'},'Log interaction — '+logModal.brandName),
+        h('div',{style:{fontSize:12,color:'var(--color-text2)',marginBottom:'1rem'}},logModal.accountName+' · '+logModal.branches+' branches · Last: '+logModal.lastCallDate),
+        h('div',{className:'form-row',style:{marginBottom:10}},
+          h('div',{className:'form-field',style:{marginBottom:0}},h('label',{className:'form-label'},'Team member'),h('select',{value:logForm.memberId,onChange:ev=>setLogForm(f=>({...f,memberId:ev.target.value}))},users.map(u=>h('option',{key:u.id,value:u.id},u.name+' ('+ROLES[u.role].label+')')))),
+          h('div',{className:'form-field',style:{marginBottom:0}},h('label',{className:'form-label'},'Call date'),h('input',{type:'date',value:logForm.date,max:today,onChange:ev=>setLogForm(f=>({...f,date:ev.target.value}))}))
+        ),
+        h('div',{className:'form-field'},h('label',{className:'form-label'},'Call status'),h('select',{value:logForm.statusId,onChange:ev=>setLogForm(f=>({...f,statusId:ev.target.value}))},callStatuses.map(s=>h('option',{key:s.id,value:s.id},s.label)))),
+        h(ExtraFieldInput,{fields:callExtraFields,values:logForm.extraFields,onChange:(id,val)=>setLogForm(f=>({...f,extraFields:{...f.extraFields,[id]:val}}))}),
+        h('div',{className:'form-field'},h('label',{className:'form-label'},'Notes'),h('textarea',{placeholder:'Brief note…',rows:2,value:logForm.note,onChange:ev=>setLogForm(f=>({...f,note:ev.target.value})),style:{resize:'vertical'}})),
+        h('div',{className:'modal-footer'},h('button',{className:'btn',onClick:()=>setLogModal(null)},'Cancel'),h('button',{className:'btn btn-primary',onClick:submitLog},'Save log'))
+      )
+    ),
+
+    /* Add Account Modal */
+    addModal&&h('div',{className:'modal-overlay',onClick:()=>setAddModal(false)},
+      h('div',{className:'modal',onClick:ev=>ev.stopPropagation()},
+        h('div',{className:'modal-title'},'Add new account'),
+        h('div',{className:'form-row'},h('div',{className:'form-field'},h('label',{className:'form-label'},'Account name'),h('input',{type:'text',value:newForm.accountName,placeholder:'Legal entity name',onChange:ev=>setNewForm(f=>({...f,accountName:ev.target.value}))})),h('div',{className:'form-field'},h('label',{className:'form-label'},'Brand name'),h('input',{type:'text',value:newForm.brandName,placeholder:'Public-facing name',onChange:ev=>setNewForm(f=>({...f,brandName:ev.target.value}))}))),
+        h('div',{className:'form-row'},h('div',{className:'form-field'},h('label',{className:'form-label'},'# of branches'),h('input',{type:'number',value:newForm.branches,min:'1',onChange:ev=>setNewForm(f=>({...f,branches:ev.target.value}))})),h('div',{className:'form-field'},h('label',{className:'form-label'},'Sector'),h('select',{value:newForm.sector,onChange:ev=>setNewForm(f=>({...f,sector:ev.target.value}))},SECTORS.map(s=>h('option',{key:s,value:s},s))))),
+        h('div',{className:'form-field'},h('label',{className:'form-label'},'Contact person'),h('input',{type:'text',value:newForm.contactPerson,onChange:ev=>setNewForm(f=>({...f,contactPerson:ev.target.value}))})),
+        h(ExtraFieldInput,{fields:accountExtraFields,values:newForm.extraFields,onChange:(id,val)=>setNewForm(f=>({...f,extraFields:{...f.extraFields,[id]:val}}))}),
+        h('div',{className:'modal-footer'},h('button',{className:'btn',onClick:()=>setAddModal(false)},'Cancel'),h('button',{className:'btn btn-primary',onClick:submitAdd},'Add account'))
+      )
+    ),
+
+    /* Import Modal */
+    importModal&&h('div',{className:'modal-overlay',onClick:()=>setImportModal(false)},
+      h('div',{className:'modal',onClick:ev=>ev.stopPropagation()},
+        h('div',{className:'modal-title'},'Import accounts — CSV'),
+        h('div',{className:'csv-drop',onClick:()=>document.getElementById('csvFile').click()},
+          h('input',{type:'file',id:'csvFile',accept:'.csv',style:{display:'none'},onChange:ev=>{const file=ev.target.files[0];if(!file)return;Papa.parse(file,{header:true,skipEmptyLines:true,complete:(res)=>{const parsed=res.data.map((r,i)=>({id:r['Account ID']||`ACC-${String(accounts.length+i+1).padStart(4,'0')}`,accountName:r['Account Name']||'',brandName:r['Brand Name']||'',branches:parseInt(r['# of Branches'])||0,sector:r['Sector']||'Retail',contactPerson:r['Contact Person']||'',lastCallDate:r['Last Call Date']||today,notes:[],extraFields:{}})).filter(r=>r.accountName);setAccounts(p=>[...p,...parsed]);setImportModal(false);}})}}),
+          'Click to select your CSV file'
+        ),
+        h('div',{style:{marginTop:10,fontSize:12,color:'var(--color-text2)'}},'Required columns: Account Name, Brand Name, # of Branches'),
+        h('div',{style:{marginTop:8}},h('button',{className:'btn btn-sm',onClick:()=>{const b=new Blob(['Account ID,Account Name,Brand Name,# of Branches,Sector,Contact Person\n'],{type:'text/csv'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='accounts_template.csv';a.click();}},'Download CSV template')),
+        h('div',{className:'modal-footer'},h('button',{className:'btn',onClick:()=>setImportModal(false)},'Close'))
+      )
+    ),
+
+    /* Switch User Modal */
+    switchModal&&h('div',{className:'modal-overlay',onClick:()=>setSwitchModal(false)},
+      h('div',{className:'modal',style:{width:320},onClick:ev=>ev.stopPropagation()},
+        h('div',{className:'modal-title'},'Switch active user'),
+        h('div',{style:{fontSize:12,color:'var(--color-text2)',marginBottom:12}},'Preview the system as any team member.'),
+        users.map(u=>h('div',{key:u.id,className:'user-row',style:{cursor:'pointer'},onClick:()=>{setActiveUserId(u.id);setSwitchModal(false);}},h('div',{style:{display:'flex',alignItems:'center',gap:10}},h('span',{className:'avatar-lg',style:{background:u.bg,color:u.color}},initials(u.name)),h('div',null,h('div',{style:{fontWeight:500,fontSize:13}},u.name),h('div',{style:{fontSize:11,color:'var(--color-text3)'}},u.email))),h(RoleBadge,{role:u.role})))
+      )
+    ),
+
+    /* User Edit/Add Modal */
+    userModal&&h('div',{className:'modal-overlay',onClick:()=>setUserModal(null)},
+      h('div',{className:'modal',onClick:ev=>ev.stopPropagation()},
+        h('div',{className:'modal-title'},userModal.isNew?'Add user':'Edit user'),
+        h(UserForm,{user:userModal.isNew?null:userModal.user,users,isMe:userModal.user?.id===activeUserId,userExtraFields,onSave:(u)=>{saveUser(u);setUserModal(null);},onClose:()=>setUserModal(null)})
+      )
+    ),
+
+    /* Account Detail Modal */
+    detailModal&&h('div',{className:'modal-overlay',onClick:()=>setDetailModal(null)},
+      h('div',{className:'modal',onClick:ev=>ev.stopPropagation()},
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}},h('div',null,h('div',{style:{fontSize:15,fontWeight:500,marginBottom:2}},detailModal.brandName),h('div',{style:{fontSize:12,color:'var(--color-text2)'}},detailModal.accountName)),h('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--color-text3)'}},detailModal.id)),
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:'1rem'}},[['Branches',detailModal.branches.toLocaleString()],['Sector',detailModal.sector],['Contact',detailModal.contactPerson||'—'],['Last call',detailModal.lastCallDate]].map(([k,v])=>h('div',{key:k,style:{background:'var(--color-bg2)',borderRadius:8,padding:'8px 12px'}},h('div',{style:{fontSize:11,color:'var(--color-text2)',marginBottom:2}},k),h('div',{style:{fontSize:13,fontWeight:500}},v)))),
+        accountExtraFields.filter(f=>detailModal.extraFields?.[f.id]).length>0&&h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:'1rem'}},accountExtraFields.filter(f=>detailModal.extraFields?.[f.id]).map(f=>h('div',{key:f.id,style:{background:'var(--color-bg2)',borderRadius:8,padding:'8px 12px'}},h('div',{style:{fontSize:11,color:'var(--color-text2)',marginBottom:2}},f.label),h('div',{style:{fontSize:13,fontWeight:500}},detailModal.extraFields[f.id])))),
+        h('div',{style:{fontWeight:500,fontSize:13,marginBottom:8}},'Interaction history ('+detailModal.notes.length+')'),
+        detailModal.notes.length===0?h('div',{style:{color:'var(--color-text3)',fontSize:12,padding:'6px 0'}},'No logs yet.'):detailModal.notes.slice(0,5).map((n,i)=>h('div',{key:i,className:'log-entry',style:{paddingLeft:0,paddingRight:0}},h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},n.memberId?h(UserPill,{userId:n.memberId,users}):h('span',null,'—'),h('span',{style:{color:'var(--color-text3)',fontSize:11}},n.date)),n.statusId&&h('div',{style:{marginTop:3}},h(StatusBadge,{statusId:n.statusId,statuses:callStatuses})),n.text&&h('div',{style:{color:'var(--color-text2)',marginTop:3}},n.text))),
+        h('div',{className:'modal-footer'},h('button',{className:'btn',onClick:()=>setDetailModal(null)},'Close'),perms.log&&h('button',{className:'btn btn-primary',onClick:()=>{setDetailModal(null);openLog(detailModal);}},'Log new call'))
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>
